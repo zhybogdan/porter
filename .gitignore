@@ -1,0 +1,31 @@
+# Local agent context: never committed
+.agent-context/
+AGENTS.md
+CLAUDE.md
+.claude/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+*.tsbuildinfo
+coverage/
+
+# Flutter / Dart
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+*.iml
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

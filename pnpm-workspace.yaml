@@ -1,0 +1,6 @@
+packages:
+  - "apps/api"
+  - "apps/web"
+  - "packages/*"
+# apps/mobile is intentionally absent: Flutter has its own package system
+# (pubspec.yaml) and its own CI step.
