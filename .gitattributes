@@ -9,11 +9,17 @@
 *.bat     text eol=crlf
 *.cmd     text eol=crlf
 
-# Generated and committed on purpose. Collapsed in diffs and excluded from
-# language statistics, so the repository reads as what was actually written.
-pnpm-lock.yaml                  -diff linguist-generated
-packages/contract/openapi.json  -diff linguist-generated
-apps/mobile/lib/api/**          -diff linguist-generated
+# Generated and committed on purpose. linguist-generated collapses them in a
+# pull request and keeps them out of the language statistics, so the
+# repository reads as what was actually written.
+#
+# Deliberately NOT -diff. That flag stops git producing a textual diff at all,
+# which defeats the reason these files are committed: a dependency change has
+# to be reviewable in the lockfile, and a breaking API change has to be
+# reviewable in openapi.json. Collapsed by default is wanted; unreadable is not.
+pnpm-lock.yaml                  linguist-generated
+packages/contract/openapi.json  linguist-generated
+apps/mobile/lib/api/**          linguist-generated
 
 # Binaries: never touched, never diffed.
 *.png  binary
