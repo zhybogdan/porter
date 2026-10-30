@@ -4,3 +4,10 @@ packages:
   - "packages/*"
 # apps/mobile is intentionally absent: Flutter has its own package system
 # (pubspec.yaml) and its own CI step.
+
+# Shared tool versions, declared once. Without this, `pnpm add typescript` in
+# any workspace quietly pulls the latest major and breaks type-aware linting:
+# typescript-eslint supports >=4.8.4 <6.1.0, and TypeScript 7 is out.
+catalog:
+  eslint: ^10.13.0
+  typescript: ~6.0.3
