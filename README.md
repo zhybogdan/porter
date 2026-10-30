@@ -31,5 +31,16 @@ corepack enable pnpm
 pnpm install
 ```
 
-The rest is not wired up yet. Target: `docker compose up` brings up postgres,
-minio, api and web; migrations and demo seed run with a single command.
+Postgres runs in docker. Copy the env file first: compose has no fallback
+credentials and will refuse to start without it.
+
+```bash
+cp .env.example .env
+```
+
+```bash
+docker compose up -d
+```
+
+Minio, api and web join the same compose file as they are built. Migrations
+and the demo seed will run with a single command.
