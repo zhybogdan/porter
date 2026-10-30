@@ -1,0 +1,21 @@
+{
+  "name": "@porter/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared TypeScript and ESLint configuration for the TypeScript workspaces",
+  "exports": {
+    "./eslint": "./eslint/base.js",
+    "./tsconfig/base.json": "./tsconfig/base.json"
+  },
+  "files": [
+    "eslint",
+    "tsconfig"
+  ],
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

@@ -22,5 +22,14 @@ packages/
 
 ## Local development
 
-Not wired up yet. Target: `docker compose up` brings up postgres, minio, api
-and web; migrations and demo seed run with a single command.
+Node is pinned in `.nvmrc`, pnpm in the `packageManager` field. Corepack
+installs the exact pnpm version from that field, so nothing is installed
+globally:
+
+```bash
+corepack enable pnpm
+pnpm install
+```
+
+The rest is not wired up yet. Target: `docker compose up` brings up postgres,
+minio, api and web; migrations and demo seed run with a single command.
