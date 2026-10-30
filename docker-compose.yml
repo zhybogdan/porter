@@ -21,7 +21,13 @@ services:
       # lost on every recreate.
       - db-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # -h 127.0.0.1 forces TCP on purpose. Without it pg_isready uses the
+      # unix socket, and during first-time init the entrypoint runs a
+      # temporary server that listens on the socket only. The check would
+      # then report healthy while nothing accepts TCP yet, and anything with
+      # depends_on: service_healthy would start too early. The real server is
+      # the first thing in this container to listen on TCP.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
