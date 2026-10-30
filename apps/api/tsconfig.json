@@ -1,0 +1,18 @@
+{
+  "extends": "@porter/config/tsconfig/base.json",
+  "compilerOptions": {
+    // The shared base holds strictness only. Module system and target live
+    // here, because Nest needs CommonJS output with decorator metadata while
+    // apps/web will need ESM and a DOM lib.
+    "module": "nodenext",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
