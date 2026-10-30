@@ -1,0 +1,28 @@
+# Normalise line endings: LF in the repository, native in the working copy.
+# Development happens on Windows, CI and Docker run Linux: without this, shell
+# scripts arrive with CRLF and fail to execute inside containers.
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.bash    text eol=lf
+*.ps1     text eol=crlf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# Generated and committed on purpose. Collapsed in diffs and excluded from
+# language statistics, so the repository reads as what was actually written.
+pnpm-lock.yaml                  -diff linguist-generated
+packages/contract/openapi.json  -diff linguist-generated
+apps/mobile/lib/api/**          -diff linguist-generated
+
+# Binaries: never touched, never diffed.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.apk  binary

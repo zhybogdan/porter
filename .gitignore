@@ -1,31 +1,76 @@
-# Local agent context: never committed
+# --- Local agent and owner context: never committed ---------------------------
+# Notes, journals, time logs, plans, drafts and tooling config. This repository
+# is public and these are working material, not the deliverable.
 .agent-context/
 AGENTS.md
 CLAUDE.md
 .claude/
+.codex/
+CODEX.md
+.cursor/
+.windsurf/
+.github/copilot-instructions.md
 
-# Node
+# Scratch space: anything local, private or throwaway.
+local/
+_local/
+scratch/
+notes.md
+NOTES.md
+TODO.local.md
+
+# --- Secrets ------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+# Firebase / FCM service files (needed from week 4, never in git)
+google-services.json
+GoogleService-Info.plist
+serviceAccount*.json
+firebase-adminsdk*.json
+# Deploy tooling
+.fly/
+.vercel/
+
+# --- Node ---------------------------------------------------------------------
 node_modules/
 dist/
 build/
 .next/
+.turbo/
 *.tsbuildinfo
+.eslintcache
 coverage/
+*.log
+npm-debug.log*
+pnpm-debug.log*
 
-# Flutter / Dart
+# --- Tests --------------------------------------------------------------------
+playwright-report/
+test-results/
+blob-report/
+
+# --- Flutter / Dart -----------------------------------------------------------
 apps/mobile/.dart_tool/
 apps/mobile/build/
 apps/mobile/.flutter-plugins
 apps/mobile/.flutter-plugins-dependencies
+apps/mobile/ios/Pods/
+apps/mobile/ios/Flutter/Flutter.framework/
+apps/mobile/ios/Flutter/ephemeral/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
 *.iml
 
-# Environment and secrets
-.env
-.env.*
-!.env.example
-
-# Editors and OS
+# --- Editors and OS -----------------------------------------------------------
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+desktop.ini
