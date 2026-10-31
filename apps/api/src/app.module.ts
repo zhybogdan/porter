@@ -1,20 +1,20 @@
 import { resolve } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { validateEnv } from './config/env';
-import { HealthModule } from './health/health.module';
+import { validateEnv } from './config/env.js';
+import { HealthModule } from './health/health.module.js';
 
 /**
  * One .env for the whole repository: compose reads the same file, so the api
  * and the database cannot drift to different credentials.
  *
- * The path is anchored to this compiled file, not to the working directory.
+ * The path is anchored to this module file, not to the working directory.
  * A relative '../../.env' was correct only when the process started inside
  * apps/api. Started from the repository root, as docker or CI would, it
  * pointed one level above the repository, the file was silently not found,
  * and validation then blamed DATABASE_URL instead of the path.
  */
-const repositoryRoot = resolve(__dirname, '..', '..', '..');
+const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
 
 @Module({
   imports: [
