@@ -11,3 +11,26 @@ packages:
 catalog:
   eslint: ^10.13.0
   typescript: ~6.0.3
+  # Prisma's `latest` dist-tag points at a release candidate (8.0.0-rc), while
+  # the stable line is tagged `prev`. The CLI and the client must stay on the
+  # same major, so both versions live here instead of in two manifests.
+  prisma: ~7.10.1
+  "@prisma/client": ~7.10.1
+
+# Which packages may execute code during install. pnpm blocks install scripts
+# by default, and that is the right default: such a script runs with the
+# developer's privileges before anyone has read a line of the package.
+#
+# Every package that asks is answered here by name, true or false, and the
+# answer is reviewed in the pull request that adds it. An undecided package
+# fails the install, so the list cannot rot quietly.
+#
+# prisma, @prisma/engines  place the schema-engine binary; no migrations without it
+# esbuild                  links the platform binary vitest runs on
+# @swc/core                arrives through @nestjs/cli for its SWC builder,
+#                          which this project does not use: nest build runs tsc
+allowBuilds:
+  '@prisma/engines': true
+  '@swc/core': false
+  esbuild: true
+  prisma: true
