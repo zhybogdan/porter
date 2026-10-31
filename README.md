@@ -44,3 +44,18 @@ docker compose up -d
 
 Minio, api and web join the same compose file as they are built. Migrations
 and the demo seed will run with a single command.
+
+## Tests
+
+The integration suite runs over HTTP against a real Postgres, so it needs its
+own database. It keeps its data in memory, listens on another port and is
+truncated between tests, and the suite refuses to start if `DATABASE_URL`
+points anywhere else.
+
+```bash
+pnpm db:test:up
+```
+
+```bash
+pnpm test
+```

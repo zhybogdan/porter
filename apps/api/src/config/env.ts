@@ -13,6 +13,12 @@ export const envSchema = z.object({
   DATABASE_URL: z
     .string()
     .startsWith('postgresql://', 'must be a postgresql:// connection string'),
+  /**
+   * Size of the node-postgres pool. A race test firing N concurrent requests
+   * needs at least N connections, or the pool serialises them and the test
+   * passes without racing.
+   */
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().max(100).default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;
