@@ -65,10 +65,6 @@ describe('errors leave as problem+json', () => {
   let server: Parameters<typeof request>[0];
 
   beforeAll(async () => {
-    // .env.test arrives with the test database in step 5. Until then the api
-    // needs the variable to exist, not to point anywhere real.
-    process.env['DATABASE_URL'] ??= 'postgresql://probe@localhost:5432/probe';
-
     const moduleRef = await Test.createTestingModule({
       // The real AppModule through the real configureApp: the suite has to
       // exercise the app production runs, not one assembled for the test.

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
+import { PrismaModule } from './prisma/prisma.module.js';
 
 /**
  * One .env for the whole repository: compose reads the same file, so the api
@@ -27,6 +28,7 @@ const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
       ignoreEnvFile: process.env.NODE_ENV === 'production',
       validate: validateEnv,
     }),
+    PrismaModule,
     HealthModule,
   ],
 })

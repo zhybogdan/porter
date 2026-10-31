@@ -23,6 +23,10 @@ TODO.local.md
 .env
 .env.*
 !.env.example
+# Committed on purpose: it points at the test container on localhost and holds
+# throwaway credentials, and without it `pnpm test` cannot run on a fresh
+# clone or in CI. Nothing real goes in this file.
+!.env.test
 *.pem
 *.key
 *.p12
