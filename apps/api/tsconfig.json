@@ -1,14 +1,18 @@
 {
   "extends": "@porter/config/tsconfig/base.json",
   "compilerOptions": {
-    // The shared base holds strictness only. Module system and target live
-    // here, because Nest needs CommonJS output with decorator metadata while
-    // apps/web will need ESM and a DOM lib.
+    // ESM, because NestJS 12 ships ESM only: @nestjs/common declares
+    // "type": "module" and has no CommonJS build. Compiling this package to
+    // CommonJS worked by accident on Node 24, which can require() ESM, and
+    // broke the moment a test runner resolved the modules itself.
     "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
     "target": "ES2023",
     "lib": ["ES2023"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "allowSyntheticDefaultImports": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "sourceMap": true

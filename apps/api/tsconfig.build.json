@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  // The build must not emit tests into dist. Linting and typechecking still
+  // use tsconfig.json, which includes them: a test that does not typecheck is
+  // a test that lies.
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}
