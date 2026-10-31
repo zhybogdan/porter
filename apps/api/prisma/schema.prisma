@@ -1,0 +1,59 @@
+// Migrations are the source of truth for this schema, not this file.
+// `prisma db pull` is never run here: it rewrites this file from the database
+// and drops what it cannot express, and week 6 adds an EXCLUDE constraint it
+// cannot express.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+// Prisma 7 no longer accepts the connection URL here: it lives in
+// prisma.config.ts for migrations, and the client gets a driver adapter.
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  manager
+  technician
+  resident
+
+  @@map("user_role")
+}
+
+/// The managing company. This is the tenant boundary: every other table
+/// carries org_id and is scoped by it in one guard, never per service.
+model Organization {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users User[]
+
+  @@map("organizations")
+}
+
+model User {
+  id    String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orgId String @map("org_id") @db.Uuid
+
+  /// Unique across the whole installation, not per organization: login takes
+  /// an email and a password with no tenant, so two organizations cannot hold
+  /// the same address without making login ambiguous.
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  fullName     String   @map("full_name")
+  phone        String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("users")
+}

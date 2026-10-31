@@ -38,6 +38,10 @@ firebase-adminsdk*.json
 .fly/
 .vercel/
 
+# Prisma generates the client from the schema; it is rebuilt by postinstall
+# and never reviewed, so it is not committed.
+apps/api/src/generated/
+
 # --- Node ---------------------------------------------------------------------
 node_modules/
 dist/
