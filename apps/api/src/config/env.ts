@@ -19,6 +19,36 @@ export const envSchema = z.object({
    * passes without racing.
    */
   DATABASE_POOL_MAX: z.coerce.number().int().positive().max(100).default(10),
+
+  /**
+   * Signs and verifies every access token. 32 characters is the floor
+   * because HS256 is a keyed hash: a short secret is a password an attacker
+   * can grind offline against any token they already hold, and a forged
+   * token is then indistinguishable from a real one.
+   */
+  JWT_SECRET: z.string().min(32, 'must be at least 32 characters'),
+  /**
+   * Seconds. Short because an access token cannot be revoked: there is no
+   * row to delete, so a stolen one stays valid until it expires, and this
+   * number is exactly how long that window is. The price of shortening it is
+   * paid in refresh traffic, not in security.
+   */
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(3600)
+    .default(900),
+  /**
+   * Seconds. Long because it decides how often a phone asks the resident to
+   * type their password again, and it is safe to be long only because the
+   * token has a row in `sessions` that logout and reuse detection can kill.
+   */
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(2_592_000),
 });
 
 export type Env = z.infer<typeof envSchema>;
