@@ -134,7 +134,7 @@ describe('POST /auth/login', () => {
     // Equal bodies are the easy half. The expensive half is that both paths
     // do the same work, or the response time answers the question the body
     // refuses to. Counted rather than timed: a clock-based assertion on a
-    // 50 ms hash is a flaky test, not a stronger one.
+    // nine-millisecond hash is a flaky test, not a stronger one.
     const verify = vi.spyOn(passwords, 'verify');
 
     await login({ email: 'nobody@demo.test', password: PASSWORD }).expect(401);
