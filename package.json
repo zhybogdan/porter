@@ -7,6 +7,8 @@
     "node": ">=24.21.0 <25"
   },
   "scripts": {
+    "db:seed": "pnpm --filter @porter/api db:seed",
+    "db:setup": "pnpm --filter @porter/api db:setup",
     "db:test:down": "docker compose --profile test down",
     "db:test:up": "docker compose --profile test up -d --wait postgres-test",
     "lint": "pnpm -r --if-present lint",
