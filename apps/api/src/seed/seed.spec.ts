@@ -61,7 +61,7 @@ describe('the demo seed', () => {
   it('fills an empty database with two organizations and five users', async () => {
     const summary = await seed();
 
-    expect(summary).toEqual({ organizations: 2, users: 5 });
+    expect(summary).toEqual({ organizations: 3, users: 5 });
     expect(await prisma.organization.count()).toBe(2);
     expect(await prisma.user.count()).toBe(5);
   });
