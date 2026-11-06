@@ -13,6 +13,7 @@ import { IsInt, IsString, Max, MaxLength, Min, ValidateNested } from 'class-vali
 import request from 'supertest';
 import { AppModule } from '../../app.module.js';
 import { configureApp } from '../../app.setup.js';
+import { Public } from '../../auth/public.decorator.js';
 import type { ProblemDetail } from './problem-detail.js';
 
 /**
@@ -40,6 +41,12 @@ class ProbeDto {
   unit!: ProbeUnitDto;
 }
 
+/**
+ * Public because the global `JwtAuthGuard` covers this fixture too, and a 401
+ * before the handler would mean this file tested authentication instead of
+ * the error format. Handing it a token would do the same thing, more slowly.
+ */
+@Public()
 @Controller('__probe')
 class ProbeController {
   @Post()
