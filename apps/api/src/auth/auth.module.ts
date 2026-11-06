@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import { PasswordService } from './password.service.js';
+import { RolesGuard } from './roles.guard.js';
 
 @Module({
   imports: [
@@ -32,10 +33,16 @@ import { PasswordService } from './password.service.js';
   providers: [
     AuthService,
     PasswordService,
-    // Global, and declared here rather than in AppModule: the guard needs the
-    // JwtService this module configures. An APP_GUARD registered in any
+    // Global, and declared here rather than in AppModule: JwtAuthGuard needs
+    // the JwtService this module configures. An APP_GUARD registered in any
     // module covers every route in the application.
+    //
+    // Order is load-bearing and it is this list that sets it: global guards
+    // run in declaration order, so authentication finishes before
+    // authorization starts. Swapped, RolesGuard would be asked about the role
+    // of a caller nobody had identified yet.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
   // The seed of step 13 and any future password change need the same hash
   // parameters as login verifies against.
