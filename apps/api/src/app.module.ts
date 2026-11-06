@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { UsersModule } from './users/users.module.js';
 
 /**
  * One .env for the whole repository: compose reads the same file, so the api
@@ -32,6 +33,7 @@ const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
     PrismaModule,
     HealthModule,
     AuthModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

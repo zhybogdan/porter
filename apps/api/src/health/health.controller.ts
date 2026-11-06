@@ -1,7 +1,14 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { Public } from '../auth/public.decorator.js';
 import { type HealthReport, HealthService } from './health.service.js';
 
+/**
+ * Public as a whole: a probe is a load balancer or an uptime monitor, and
+ * neither of them has an account here. Marked on the controller rather than
+ * the route, because every future check added to it is a probe too.
+ */
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly health: HealthService) {}
