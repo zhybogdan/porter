@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A superseded run proves nothing about the commit that replaced it. Cancelling
+# it also keeps a branch from queueing five runs while it is being pushed to.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api
+    runs-on: ubuntu-latest
+
+    services:
+      # A real Postgres, not a mock. The claims this project makes at an
+      # interview -- two bookings racing for one slot, a sync batch sent twice
+      # -- are claims about what the database does under concurrency, and a
+      # mock would answer whatever we taught it to answer. The suite also
+      # replays the whole migration history into an empty database on every
+      # run, which is the one thing a mock can never check.
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: porter
+          POSTGRES_PASSWORD: porter_local_dev
+          POSTGRES_DB: porter
+        # 5433 on purpose: the suite refuses to start unless DATABASE_URL
+        # points at port 5433, because it truncates every table and that
+        # refusal is what stops it from ever doing so to a development
+        # database. CI therefore uses the same .env.test the developer does,
+        # with nothing overridden.
+        ports:
+          - 5433:5432
+        # -h 127.0.0.1 forces TCP. Without it pg_isready uses the unix socket,
+        # which the temporary server of first-time init also listens on, so the
+        # service would report healthy before anything accepted a connection.
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U porter -d porter"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the exact version out of the packageManager field, so CI cannot
+      # drift to a pnpm the lockfile was not written by.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          # The pnpm store, keyed on the lockfile. Two things are deliberately
+          # not cached: node_modules, which is a tree of symlinks into a store
+          # path and breaks when restored into a different run; and the Prisma
+          # client in src/generated, which `postinstall` regenerates from the
+          # schema -- a cached client that no longer matches the schema is
+          # exactly the failure CI exists to catch.
+          cache: pnpm
+
+      # --frozen-lockfile: an install that would have to change the lockfile
+      # fails instead. Otherwise CI quietly tests a dependency tree that is not
+      # the one in the repository.
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      # One test step, and the honest reason is that this suite has no unit
+      # stage to run before it: nearly every spec goes over HTTP against a real
+      # Postgres by design. The migrations are applied by the suite's own
+      # global setup with `prisma migrate deploy` -- deploy and not dev, which
+      # would try to create a migration for drift it found and would want a
+      # terminal to ask about it.
+      - run: pnpm test
+
+      # Last, not first. A build failure after green tests is a real failure,
+      # but it is the least likely of the five and the slowest to reach, so it
+      # goes where it costs the least waiting.
+      - run: pnpm build
