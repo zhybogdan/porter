@@ -14,6 +14,8 @@ export interface HealthReport {
  */
 @Injectable()
 export class HealthService {
+  // The unscoped handle: a probe arrives without a token and therefore without
+  // a tenant, and what it asks the database is not about rows at all.
   constructor(private readonly prisma: PrismaService) {}
 
   async check(): Promise<HealthReport> {

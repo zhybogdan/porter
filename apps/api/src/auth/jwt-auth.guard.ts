@@ -7,6 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { UserRole } from '../generated/prisma/enums.js';
+import { setTenant } from '../prisma/tenant-context.js';
 import type { AccessTokenPayload } from './access-token-payload.js';
 import type { AuthenticatedRequest } from './authenticated-request.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
@@ -81,6 +82,13 @@ export class JwtAuthGuard implements CanActivate {
       orgId: claims.org,
       role: claims.role,
     };
+
+    // The same fact, recorded a second time and for a different reader. The
+    // request object is for controllers; this is for the database handle,
+    // which has no request to look at and must not be handed one -- a query
+    // layer that reaches for HTTP is a query layer that cannot be used from a
+    // job or a test.
+    setTenant(claims.org);
 
     return true;
   }

@@ -72,6 +72,10 @@ describe('health when the database is unreachable', () => {
       .overrideProvider(PrismaService)
       .useValue({
         $queryRaw: () => Promise.reject(new Error('connection refused')),
+        // The tenant-scoped handle is built from this provider at startup, so
+        // the stub has to be extendable even though nothing on this path uses
+        // the result: a probe has no token and therefore no tenant.
+        $extends: () => ({}),
       })
       .compile();
 
