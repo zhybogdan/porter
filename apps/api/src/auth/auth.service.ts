@@ -27,6 +27,12 @@ type Db = PrismaService | Prisma.TransactionClient;
 @Injectable()
 export class AuthService {
   constructor(
+    // The unscoped handle, and this is the place that most needs saying so.
+    // Login is handed an email and a password with no tenant attached, and
+    // refresh is handed a token and nothing else: both have to find their row
+    // before there is any organization to scope to. The tenant-scoped handle
+    // would refuse these queries, and refusing them is correct -- it means the
+    // exception is written down here instead of being assumed everywhere.
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly jwt: JwtService,

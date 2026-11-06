@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { unauthenticated } from '../auth/unauthenticated.js';
 import type { UserRole } from '../generated/prisma/enums.js';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { TENANT_DB, type TenantDb } from '../prisma/tenant-db.js';
 
 /**
  * What a client is told about itself. No password hash, no timestamps: a
@@ -18,7 +18,7 @@ export interface Profile {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(TENANT_DB) private readonly db: TenantDb) {}
 
   /**
    * Read from the database, not echoed back from the token.
@@ -29,7 +29,15 @@ export class UsersService {
    * string -- which an email and a full name are not.
    */
   async profile(userId: string): Promise<Profile> {
-    const user = await this.prisma.user.findUnique({
+    // `findFirst` and not `findUnique`, although the id is unique: Prisma only
+    // accepts unique columns in a `findUnique` filter, so the tenant scope
+    // cannot be added to one and the extension refuses it outright.
+    //
+    // The scope then buys something here too. The id comes from the token's
+    // `sub` and the organization from its `org`, and nothing has ever checked
+    // that the two belong together. Now the query does: a token claiming one
+    // organization and a user id from another matches no row and answers 401.
+    const user = await this.db.user.findFirst({
       where: { id: userId },
       select: {
         id: true,
