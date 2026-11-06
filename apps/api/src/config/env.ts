@@ -49,6 +49,20 @@ export const envSchema = z.object({
     .int()
     .positive()
     .default(2_592_000),
+
+  /**
+   * The password every demo account gets.
+   *
+   * Optional, and that is the only thing worth explaining here: the api does
+   * not need it to serve a single request, so demanding it at boot would make
+   * a deployment fail over a variable only `pnpm db:seed` reads. The seed
+   * itself refuses to run without it rather than falling back to something
+   * guessable.
+   */
+  SEED_PASSWORD: z
+    .string()
+    .min(12, 'must be at least 12 characters')
+    .optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
