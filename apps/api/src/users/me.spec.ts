@@ -7,10 +7,10 @@ import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
 import type { AccessTokenPayload } from '../auth/access-token-payload.js';
 import { PasswordService } from '../auth/password.service.js';
-import type { ProblemDetail } from '../common/problem/problem-detail.js';
+import type { ProblemDetail } from '../common/problem/problem-detail.response.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { truncateAll } from '../test/db.js';
-import type { Profile } from './users.service.js';
+import type { Profile } from './dto/profile.response.js';
 
 const EMAIL = 'resident@demo.test';
 const PASSWORD = 'correct horse battery staple';
@@ -94,6 +94,20 @@ describe('GET /me behind the global guard', () => {
       detail: 'Missing or invalid access token',
       instance: '/me',
     });
+  });
+
+  /**
+   * RFC 9110 requires a 401 to name a scheme, and a client that has to read
+   * English prose to learn what credential to send is a client that will
+   * hardcode the answer instead.
+   */
+  it('names the scheme in WWW-Authenticate on a 401', async () => {
+    const response = await me().expect(401);
+
+    // Bare `Bearer`, with no `error="invalid_token"` and no `realm`: the
+    // parameter would say which check failed, and this API refuses to say
+    // that on purpose.
+    expect(response.headers['www-authenticate']).toBe('Bearer');
   });
 
   it('rejects a scheme other than Bearer', async () => {

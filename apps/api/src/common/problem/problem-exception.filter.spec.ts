@@ -14,7 +14,7 @@ import request from 'supertest';
 import { AppModule } from '../../app.module.js';
 import { configureApp } from '../../app.setup.js';
 import { Public } from '../../auth/public.decorator.js';
-import type { ProblemDetail } from './problem-detail.js';
+import type { ProblemDetail } from './problem-detail.response.js';
 
 /**
  * A fixture that exists only here: the format has to be provable before there

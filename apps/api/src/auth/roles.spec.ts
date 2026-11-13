@@ -11,7 +11,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
-import type { ProblemDetail } from '../common/problem/problem-detail.js';
+import type { ProblemDetail } from '../common/problem/problem-detail.response.js';
 import type { UserRole } from '../generated/prisma/enums.js';
 import type { AccessTokenPayload } from './access-token-payload.js';
 import { Public } from './public.decorator.js';
