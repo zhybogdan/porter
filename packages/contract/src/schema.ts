@@ -95,6 +95,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The buildings of the caller's organization, newest first. */
+        get: operations["PropertiesController_list"];
+        put?: never;
+        /** Add a building. Managers only. */
+        post: operations["PropertiesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/properties/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One building by id. */
+        get: operations["PropertiesController_byId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -170,6 +205,37 @@ export interface components {
             fullName: string;
             /** @description The organization this user belongs to: the tenant boundary. */
             orgId: string;
+        };
+        Property: {
+            id: string;
+            name: string;
+            address: string;
+            /** @description IANA zone name, for example `Europe/Kyiv`. */
+            timezone: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Also the value of the `ETag` header on this resource.
+             */
+            updatedAt: string;
+        };
+        PropertyPage: {
+            items: components["schemas"]["Property"][];
+            /**
+             * @description Pass back as `?cursor=` for the next page. Null on the last one, which is
+             *     how a client knows to stop -- rather than by seeing fewer rows than it
+             *     asked for, which is also true of a full last page.
+             */
+            nextCursor: string | null;
+        };
+        CreatePropertyDto: {
+            /** @description What the managers call this building: "Riverside 12". */
+            name: string;
+            /** @description Free text, one line, as a courier would read it. */
+            address: string;
+            /** @description IANA zone name, for example `Europe/Kyiv`. */
+            timezone: string;
         };
     };
     responses: never;
@@ -344,6 +410,158 @@ export interface operations {
             };
             /** @description Missing, malformed or expired access token */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    PropertiesController_list: {
+        parameters: {
+            query?: {
+                /** @description Omit for the first page; otherwise the `nextCursor` of the page before. */
+                cursor?: string;
+                /** @description How many rows to return, at most 100. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of buildings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyPage"];
+                };
+            };
+            /** @description The cursor could not be read */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description A query parameter failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    PropertiesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePropertyDto"];
+            };
+        };
+        responses: {
+            /** @description The building created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Property"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Signed in, but not as a manager */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The body failed validation; `errors` names the fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    PropertiesController_byId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The building */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Property"];
+                };
+            };
+            /** @description The id is not a uuid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No such building in the caller’s organization. Also the answer when it exists in another one */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

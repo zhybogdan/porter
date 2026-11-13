@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { truncateAll } from '../test/db.js';
 import { PrismaService } from './prisma.service.js';
 import { runWithTenantContext, setTenant } from './tenant-context.js';
@@ -141,6 +142,32 @@ describe('registry tables', () => {
         data: { orgId: alpha, unitId: unit.id, userId: outsider },
       }),
     ).rejects.toThrow(/user_id_org_id_fkey/);
+  });
+
+  /**
+   * The scoped handle writes the tenant into the row it creates, but it
+   * cannot reach rows created inside that row. Refusing beats stamping the
+   * parent and leaving the children without an organization.
+   */
+  it('refuses a nested write through the scoped handle', async () => {
+    const alpha = await createOrg('Alpha Property Group');
+
+    await expect(
+      runWithTenantContext(async () => {
+        setTenant(alpha);
+
+        return db.property.create({
+          // Cast for the same reason the service casts: the generated types
+          // still want the column the extension adds.
+          data: {
+            name: 'Riverside 12',
+            address: '12 Riverside Street',
+            timezone: 'Europe/Kyiv',
+            units: { create: [{ label: '12B' }] },
+          } as Prisma.PropertyCreateInput,
+        });
+      }),
+    ).rejects.toThrow(/nested write on "units"/);
   });
 
   /**
