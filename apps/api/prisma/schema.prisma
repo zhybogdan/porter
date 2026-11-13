@@ -31,7 +31,8 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  users User[]
+  users      User[]
+  properties Property[]
 
   @@map("organizations")
 }
@@ -54,7 +55,14 @@ model User {
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   sessions     Session[]
+  residencies  Residency[]
 
+  /// Not a second way to identify a user: `id` alone already does that. This
+  /// pair exists to be pointed at. A residency names a unit and a user and
+  /// must not be allowed to join one organization's unit to another's
+  /// resident, so it carries `org_id` and references it in both foreign keys
+  /// -- and a foreign key can only point at columns that are unique together.
+  @@unique([id, orgId])
   @@index([orgId])
   @@map("users")
 }
@@ -98,4 +106,105 @@ model Session {
   /// reuse detection, and both arrive with a user id.
   @@index([userId])
   @@map("sessions")
+}
+
+/// A building the managing company looks after. The registry starts here:
+/// property -> unit -> resident.
+model Property {
+  id String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+
+  orgId String @map("org_id") @db.Uuid
+
+  name    String
+  address String
+
+  /// IANA zone name, `Europe/Kyiv` rather than `+02:00`. An offset is a fact
+  /// about one moment and a zone is a rule, so only the zone survives a
+  /// daylight-saving change -- and every date this API shows a resident is
+  /// read by someone standing in this building. One company may hold
+  /// buildings in two zones, which is why it sits here and not on the
+  /// organization.
+  timezone String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  units        Unit[]
+
+  /// Pointed at by `units`, for the same reason as the pair on `users`.
+  @@unique([id, orgId])
+  @@index([orgId])
+  @@map("properties")
+}
+
+/// An apartment: "12B". Addressable on its own because a request and a
+/// residency both point at one.
+model Unit {
+  id String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+
+  /// Copied down from the property rather than read through it on every
+  /// query, because the tenant filter narrows by a column and has no join to
+  /// reach for. The copy cannot drift: the foreign key below points at
+  /// `(id, org_id)` of the property, so a unit whose organization disagrees
+  /// with its building's is refused by the database, not by a code review.
+  ///
+  /// That also removes the need for a second foreign key to `organizations`:
+  /// this column already matches a property, and that property's own key
+  /// already matches an organization.
+  orgId      String @map("org_id") @db.Uuid
+  propertyId String @map("property_id") @db.Uuid
+
+  /// As written on the door. A string, not a number: "12B", "Penthouse" and
+  /// "Unit 4 (rear)" are all labels a manager types.
+  label String
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  property    Property    @relation(fields: [propertyId, orgId], references: [id, orgId], onDelete: Cascade)
+  residencies Residency[]
+
+  /// Two doors in one building cannot carry the same label. Across buildings
+  /// they can, and usually do.
+  @@unique([propertyId, label])
+  /// Pointed at by `residencies`.
+  @@unique([id, orgId])
+  @@index([orgId])
+  @@map("units")
+}
+
+/// One stay of one resident in one unit.
+///
+/// A row per stay rather than a `user_id` column on the unit, because the
+/// question asked later is "who lived here in March" as often as "who lives
+/// here now". Moving out sets `moved_out_at`; nothing is deleted.
+model Residency {
+  id String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+
+  orgId  String @map("org_id") @db.Uuid
+  unitId String @map("unit_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  movedInAt DateTime @default(now()) @map("moved_in_at") @db.Timestamptz(3)
+
+  /// Null while the resident still lives there. A nullable end rather than a
+  /// boolean: when somebody moved out is exactly what gets read when a
+  /// request from last spring has to be explained.
+  movedOutAt DateTime? @map("moved_out_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// Both keys carry `org_id`, and that is the point of this table's copy of
+  /// it: one column shared by two foreign keys is what makes "this unit and
+  /// this resident belong to the same organization" a rule the database
+  /// enforces rather than a check somebody has to remember to write.
+  unit Unit @relation(fields: [unitId, orgId], references: [id, orgId], onDelete: Cascade)
+  user User @relation(fields: [userId, orgId], references: [id, orgId], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([unitId])
+  @@index([userId])
+  @@map("residencies")
 }

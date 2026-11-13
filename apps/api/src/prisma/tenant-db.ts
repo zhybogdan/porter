@@ -20,6 +20,9 @@ export const TENANT_DB = Symbol('TENANT_DB');
 const SCOPE_FIELD = new Map<string, string>([
   ['User', 'orgId'],
   ['Organization', 'id'],
+  ['Property', 'orgId'],
+  ['Unit', 'orgId'],
+  ['Residency', 'orgId'],
 ]);
 
 /**
