@@ -1,0 +1,12 @@
+{
+  "$comment": "Read by scripts/check-contract.mjs and by the backend kit's edit guard. The steps run in order from the repository root: the API is built first because the OpenAPI document can only be written from the build output, then the document is written, then every client is generated from it. The Dart generator joins this list in week 4, when there is a Flutter app to point it at.",
+  "generate": [
+    "pnpm --filter @porter/api run build",
+    "pnpm --filter @porter/api run openapi",
+    "pnpm --filter @porter/contract run generate"
+  ],
+  "outputs": [
+    "packages/contract/openapi.json",
+    "packages/contract/src/schema.ts"
+  ]
+}

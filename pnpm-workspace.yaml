@@ -17,6 +17,17 @@ catalog:
   prisma: ~7.10.1
   "@prisma/client": ~7.10.1
 
+# openapi-typescript 7.13 still declares `typescript: ^5.x` as a peer, and this
+# repository is on 6. Answered here rather than left as a warning on every
+# install, and answered this way rather than by pinning TypeScript 5 in that one
+# package: two TypeScript versions in one repository is the thing the catalog
+# above exists to prevent. Checked on 13.11.2026 -- it generates the document's
+# types correctly on 6, and its output is typechecked by our own compiler
+# afterwards, so a real incompatibility fails loudly rather than silently.
+peerDependencyRules:
+  allowedVersions:
+    "openapi-typescript>typescript": "6"
+
 # Which packages may execute code during install. pnpm blocks install scripts
 # by default, and that is the right default: such a script runs with the
 # developer's privileges before anyone has read a line of the package.

@@ -80,7 +80,19 @@ jobs:
       # terminal to ask about it.
       - run: pnpm test
 
-      # Last, not first. A build failure after green tests is a real failure,
-      # but it is the least likely of the five and the slowest to reach, so it
-      # goes where it costs the least waiting.
+      # A build failure after green tests is a real failure, but it is the
+      # least likely of these checks and the slowest to reach, so it goes where
+      # it costs the least waiting.
       - run: pnpm build
+
+      # Regenerates the OpenAPI document and every client from the code, then
+      # fails if any of them changed. Here the checkout is the commit, so a
+      # difference means the commit carries a contract that no longer matches
+      # its own API -- which is the one failure a breaking API change produces
+      # that no test in this repository would notice.
+      #
+      # It rebuilds the API itself rather than reusing the step above: the
+      # check has to be runnable on a developer's machine with one command,
+      # and a script that silently depends on what some earlier step left in
+      # `dist` is a script that passes for the wrong reason.
+      - run: pnpm contract
