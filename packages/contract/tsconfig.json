@@ -1,0 +1,18 @@
+{
+  "extends": "@porter/config/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
+    // DOM, because the first consumer of this client is a browser: the types
+    // of `fetch`, `Headers` and `RequestInit` come from there. Node 24 has
+    // all three at runtime, so the same build works in both places.
+    "lib": ["ES2023", "DOM"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

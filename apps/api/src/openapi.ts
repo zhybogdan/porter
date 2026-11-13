@@ -3,7 +3,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module.js';
 import { configureApp } from './app.setup.js';
 
 /**
@@ -21,17 +20,34 @@ import { configureApp } from './app.setup.js';
  * generated clients would then be wrong in a way no test here could see.
  */
 async function main(): Promise<void> {
-  // `NestFactory.create` instantiates the providers but does not run the
-  // lifecycle hooks -- `onModuleInit` waits for `app.init()`, which only
-  // `app.listen()` reaches. That is what keeps this script off the database:
-  // `PrismaService` is constructed, its pool is built lazily by node-postgres,
-  // and nothing ever asks it for a connection.
+  // `AppModule` validates the whole configuration while it is being
+  // evaluated: the `ConfigModule.forRoot({ validate })` call sits inside its
+  // `@Module` metadata, so importing the module is enough to run the schema.
+  // The document needs none of those values, but the module refuses to exist
+  // without them, and `.env` is deliberately not in the repository -- so the
+  // first CI run of `pnpm contract` failed with no database URL and no secret.
   //
-  // The alternative was to make the connection lazy in `PrismaService` itself,
-  // and it costs more than it looks: a wrong DATABASE_URL would stop failing
-  // at boot and start surfacing as a slow 500 for whoever happened to arrive
-  // first. The document is generated without a database either way, so the
-  // cheaper side is the one that changes nothing about how the API starts.
+  // Placeholders, and only where a value is missing: a developer with a real
+  // `.env` keeps it. Nothing reads them. No provider asks for a connection --
+  // that waits for `onModuleInit`, which only `app.listen()` reaches and this
+  // script never does -- and nothing in the document comes from configuration,
+  // which is checked by generating it against a dead DATABASE_URL and getting
+  // the same bytes.
+  //
+  // The alternative was to hand CI a configuration of its own: a copied
+  // `.env.test`, or values pasted into the workflow. Both make this check
+  // depend on a second place being right, and a check that needs setup to
+  // pass is a check that will one day pass for the wrong reason.
+  process.env['DATABASE_URL'] ??=
+    'postgresql://openapi:openapi@127.0.0.1:1/openapi';
+  process.env['JWT_SECRET'] ??= 'openapi-document-placeholder-secret';
+
+  // Imported here rather than at the top of the file, and that is not style:
+  // ESM evaluates every static import before the first statement of this
+  // module, so a static `import { AppModule }` would run the configuration
+  // schema before the two lines above could set anything.
+  const { AppModule } = await import('./app.module.js');
+
   const app = await NestFactory.create(AppModule, { logger: false });
   configureApp(app);
 

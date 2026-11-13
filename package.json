@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "contract": "node scripts/check-contract.mjs",
     "db:seed": "pnpm --filter @porter/api db:seed",
     "db:setup": "pnpm --filter @porter/api db:setup",
     "db:test:down": "docker compose --profile test down",
@@ -25,6 +26,7 @@
     "lint-staged": "^17.6.0"
   },
   "lint-staged": {
-    "apps/api/**/*.ts": "pnpm --filter @porter/api exec eslint --fix"
+    "apps/api/**/*.ts": "pnpm --filter @porter/api exec eslint --fix",
+    "packages/contract/**/*.ts": "pnpm --filter @porter/contract exec eslint --fix --no-warn-ignored"
   }
 }

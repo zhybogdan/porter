@@ -1,0 +1,33 @@
+{
+  "name": "@porter/contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The OpenAPI document of the Porter API and the TypeScript client generated from it",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./openapi.json": "./openapi.json"
+  },
+  "files": [
+    "dist",
+    "openapi.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "generate": "openapi-typescript openapi.json --output src/schema.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.15.1"
+  },
+  "devDependencies": {
+    "@porter/config": "workspace:*",
+    "eslint": "catalog:",
+    "openapi-typescript": "^7.11.1",
+    "typescript": "catalog:"
+  }
+}
