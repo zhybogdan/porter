@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { PropertiesModule } from './properties/properties.module.js';
 import { UsersModule } from './users/users.module.js';
 
 /**
@@ -34,6 +35,7 @@ const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
     HealthModule,
     AuthModule,
     UsersModule,
+    PropertiesModule,
   ],
 })
 export class AppModule {}

@@ -47,6 +47,20 @@ const FILTERABLE = new Set([
 ]);
 
 /**
+ * The writes this extension can stamp, and therefore the only ones it allows
+ * on a scoped model.
+ *
+ * A read is narrowed by adding to its `where`; a write has no `where` to add
+ * to, so the tenant goes into the row itself. Which is also why `update`,
+ * `delete` and `upsert` are still absent: each takes a unique `where`, the
+ * same place `findUnique` fails, so a pass-through would edit a row belonging
+ * to anyone. Their replacements are `updateMany` and `deleteMany`, which take
+ * a filter -- and which is what optimistic locking needs anyway, because a
+ * conditional update is the only kind that can lose a race safely.
+ */
+const STAMPABLE = new Set(['create', 'createMany', 'createManyAndReturn']);
+
+/**
  * The database handle feature code gets: every query it makes is confined to
  * the organization of the request being handled.
  *
@@ -67,7 +81,9 @@ export function createTenantDb(prisma: PrismaService) {
             return query(args);
           }
 
-          if (!FILTERABLE.has(operation)) {
+          const stamping = STAMPABLE.has(operation);
+
+          if (!stamping && !FILTERABLE.has(operation)) {
             throw new Error(
               `${operation} on ${model} cannot be scoped to a tenant; use findFirst, findMany or the *Many writes, or take the unscoped PrismaService and say in a comment why`,
             );
@@ -85,7 +101,11 @@ export function createTenantDb(prisma: PrismaService) {
             );
           }
 
-          return query(withScope(args, field, tenant));
+          return query(
+            stamping
+              ? withStamp(args, field, tenant)
+              : withScope(args, field, tenant),
+          );
         },
       },
     },
@@ -100,14 +120,8 @@ export type TenantDb = ReturnType<typeof createTenantDb>;
  * "same tenant, carry on" and "stop".
  */
 function withScope(args: unknown, field: string, tenant: string): object {
-  const query =
-    typeof args === 'object' && args !== null
-      ? (args as Record<string, unknown>)
-      : {};
-  const where =
-    typeof query['where'] === 'object' && query['where'] !== null
-      ? (query['where'] as Record<string, unknown>)
-      : {};
+  const query = asRecord(args);
+  const where = asRecord(query['where']);
   const asked = where[field];
 
   if (asked !== undefined && asked !== tenant) {
@@ -117,4 +131,73 @@ function withScope(args: unknown, field: string, tenant: string): object {
   }
 
   return { ...query, where: { ...where, [field]: tenant } };
+}
+
+/**
+ * Writes the tenant into the row being created, for one row or for a list.
+ *
+ * The caller does not pass `orgId` and should not: a handler that names the
+ * organization is a handler that can name the wrong one, and the whole point
+ * of this file is that the request's tenant is not a parameter anybody can
+ * get wrong.
+ */
+function withStamp(args: unknown, field: string, tenant: string): object {
+  const query = asRecord(args);
+  const data = query['data'];
+
+  if (Array.isArray(data)) {
+    return {
+      ...query,
+      data: data.map((row) => stampRow(row, field, tenant)),
+    };
+  }
+
+  return { ...query, data: stampRow(data, field, tenant) };
+}
+
+function stampRow(row: unknown, field: string, tenant: string): object {
+  const data = asRecord(row);
+  const asked = data[field];
+
+  if (asked !== undefined && asked !== tenant) {
+    throw new Error(
+      `write sets ${field} to ${JSON.stringify(asked)} while the request belongs to ${tenant}`,
+    );
+  }
+
+  refuseNestedWrites(data);
+
+  return { ...data, [field]: tenant };
+}
+
+/**
+ * A nested write creates rows this function cannot reach.
+ *
+ * `property.create({ data: { name, units: { create: [...] } } })` would stamp
+ * the property and leave every unit without a tenant, and the database would
+ * then refuse the whole statement -- or, for a model whose column is
+ * nullable, accept rows nobody can see. Refusing beats both: the rows are
+ * created in separate calls, each stamped on its own.
+ */
+function refuseNestedWrites(data: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value !== 'object' || value === null || value instanceof Date) {
+      continue;
+    }
+
+    const nested = value as Record<string, unknown>;
+
+    if ('create' in nested || 'createMany' in nested || 'connectOrCreate' in nested) {
+      throw new Error(
+        `nested write on "${key}" cannot be scoped to a tenant; create the rows in separate calls, or take the unscoped PrismaService and say in a comment why`,
+      );
+    }
+  }
+}
+
+/** Whatever Prisma handed us, as something with keys. */
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
 }
