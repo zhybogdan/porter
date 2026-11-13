@@ -1,5 +1,5 @@
 import type { ValidationError } from 'class-validator';
-import type { ProblemFieldError } from './problem-detail.js';
+import type { ProblemFieldError } from './problem-detail.response.js';
 
 /**
  * class-validator reports a tree: one node per property, with `children` for

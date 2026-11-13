@@ -12,7 +12,13 @@ import {
   PROBLEM_CONTENT_TYPE,
   type ProblemDetail,
   type ProblemFieldError,
-} from './problem-detail.js';
+} from './problem-detail.response.js';
+
+// `status` on a problem is a plain number -- it is parsed out of whatever the
+// thrower produced -- and comparing a number against an enum member is an
+// error the linter is right to raise: the two types only look alike. Widening
+// the enum member once, here, keeps the magic number out of the code below.
+const UNAUTHORIZED: number = HttpStatus.UNAUTHORIZED;
 
 /**
  * Every error leaves through here, so the format is one decision instead of a
@@ -43,6 +49,20 @@ export class ProblemExceptionFilter implements ExceptionFilter {
         `${request.method} ${request.url} failed`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+    }
+
+    // RFC 9110 requires a 401 to name at least one authentication scheme, and
+    // RFC 6750 names this one. Without it the body says "your token is not
+    // good" in prose that only a human can read, and a client is left to
+    // hardcode what to send next.
+    //
+    // Bare `Bearer`, with no `error="invalid_token"` parameter: that parameter
+    // would say which of the six checks rejected the request, and refusing to
+    // say that is a decision this API has already made once, in
+    // `unauthenticated()`. No `realm` either -- there is one API here, and a
+    // realm name would be decoration that clients then start depending on.
+    if (problem.status === UNAUTHORIZED) {
+      response.setHeader('WWW-Authenticate', 'Bearer');
     }
 
     response.status(problem.status).type(PROBLEM_CONTENT_TYPE).json(problem);

@@ -1,0 +1,418 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "The body is the same in both answers and names the part that is down.",
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Everything answers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "At least one dependency is down",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Report whether the API and the database answer.",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A new token pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown email or wrong password; the two are not told apart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation; `errors` names the fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Exchange an email and a password for a token pair.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "The presented token stops working. Presenting one a second time is treated as a leak and revokes every token in its chain.",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A new token pair",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unknown, expired or already used refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation; `errors` names the fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Exchange a refresh token for a new pair.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The token is revoked, or was revoked already"
+          },
+          "422": {
+            "description": "The body failed validation; `errors` names the fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Revoke one refresh token.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "MeController_profile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The signed-in user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The signed-in user, read from the database rather than from the token.",
+        "tags": [
+          "me"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Porter API",
+    "description": "Maintenance requests and amenity booking for managed apartment buildings.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthReport": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "`degraded` whenever any check below is down.",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "type": "string"
+          },
+          "database": {
+            "enum": [
+              "up",
+              "down"
+            ],
+            "type": "string"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "description": "Seconds since this process started, rounded."
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "uptimeSeconds"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Case-insensitive.",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "description": "Sent as typed; no normalisation and no minimum length.",
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "TokenPair": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Signed JWT, sent as `Authorization: Bearer <token>` on every request."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Lifetime of the access token in seconds, so the client need not decode it."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Opaque string, exchanged at `POST /auth/refresh` for the next pair."
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "refreshToken"
+        ]
+      },
+      "ProblemFieldError": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Dotted path of the field that failed, e.g. `unit.label`."
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "message"
+        ]
+      },
+      "ProblemDetail": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A URI identifying the problem kind. `about:blank` means \"nothing beyond\nthe status code\", which is the honest answer for plain HTTP errors. A\nproblem that clients must handle specially gets its own URI, and that URI\nthen becomes part of the contract.",
+            "example": "about:blank"
+          },
+          "title": {
+            "type": "string",
+            "example": "Unauthorized"
+          },
+          "status": {
+            "type": "number",
+            "example": 401
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The path that produced the problem.",
+            "example": "/me"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProblemFieldError"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "instance"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "The string handed out by login or by the previous refresh.",
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "manager",
+          "technician",
+          "resident"
+        ],
+        "description": "What this user is allowed to do."
+      },
+      "Profile": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "description": "What this user is allowed to do.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "The organization this user belongs to: the tenant boundary."
+          }
+        },
+        "required": [
+          "role",
+          "id",
+          "email",
+          "fullName",
+          "orgId"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ]
+}

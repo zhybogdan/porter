@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import type { HealthReport } from './dto/health-report.response.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-
-export interface HealthReport {
-  status: 'ok' | 'degraded';
-  database: 'up' | 'down';
-  uptimeSeconds: number;
-}
 
 /**
  * Answers what is true, not what to send: the HTTP status is the controller's

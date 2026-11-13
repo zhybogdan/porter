@@ -18,7 +18,7 @@ import { truncateAll } from '../test/db.js';
 import type { AccessTokenPayload } from './access-token-payload.js';
 import { PasswordService } from './password.service.js';
 import { hashRefreshToken } from './refresh-token.js';
-import type { TokenPair } from './token-pair.js';
+import type { TokenPair } from './dto/token-pair.response.js';
 
 const EMAIL = 'resident@demo.test';
 const PASSWORD = 'correct horse battery staple';

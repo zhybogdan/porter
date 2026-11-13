@@ -6,11 +6,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
 import { PasswordService } from '../auth/password.service.js';
-import type { TokenPair } from '../auth/token-pair.js';
+import type { TokenPair } from '../auth/dto/token-pair.response.js';
 import type { Env } from '../config/env.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { truncateAll } from '../test/db.js';
-import type { Profile } from '../users/users.service.js';
+import type { Profile } from '../users/dto/profile.response.js';
 import { DEMO_ORGANIZATIONS, README_ACCOUNTS } from './demo-data.js';
 import { seedDemoData } from './seed.js';
 

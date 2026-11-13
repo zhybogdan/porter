@@ -6,7 +6,7 @@ import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { truncateAll } from '../test/db.js';
-import type { HealthReport } from './health.service.js';
+import type { HealthReport } from './dto/health-report.response.js';
 
 describe('health against a real database', () => {
   let app: INestApplication;

@@ -29,8 +29,13 @@ catalog:
 # esbuild                  links the platform binary vitest runs on
 # @swc/core                arrives through @nestjs/cli for its SWC builder,
 #                          which this project does not use: nest build runs tsc
+# @scarf/scarf             arrives through @nestjs/swagger; its install script
+#                          posts an install report to scarf.sh. Nothing in the
+#                          build needs it, and an outbound call from `pnpm
+#                          install` is not something this project asks for
 allowBuilds:
   '@prisma/engines': true
+  '@scarf/scarf': false
   '@swc/core': false
   esbuild: true
   prisma: true

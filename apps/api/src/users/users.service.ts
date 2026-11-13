@@ -1,20 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { unauthenticated } from '../auth/unauthenticated.js';
-import type { UserRole } from '../generated/prisma/enums.js';
 import { TENANT_DB, type TenantDb } from '../prisma/tenant-db.js';
-
-/**
- * What a client is told about itself. No password hash, no timestamps: a
- * response shape is a promise, and every field in it is one more thing that
- * cannot change later without breaking somebody.
- */
-export interface Profile {
-  id: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  orgId: string;
-}
+import type { Profile } from './dto/profile.response.js';
 
 @Injectable()
 export class UsersService {

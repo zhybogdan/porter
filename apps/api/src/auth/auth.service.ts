@@ -9,7 +9,7 @@ import type { LoginDto } from './dto/login.dto.js';
 import type { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { PasswordService } from './password.service.js';
 import { createRefreshToken, hashRefreshToken } from './refresh-token.js';
-import type { TokenPair } from './token-pair.js';
+import type { TokenPair } from './dto/token-pair.response.js';
 
 /**
  * Everything an access token is built from, and nothing else. Narrower than
