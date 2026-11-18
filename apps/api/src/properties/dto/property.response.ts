@@ -17,7 +17,11 @@ export class Property {
 
   createdAt!: Date;
 
-  /** Also the value of the `ETag` header on this resource. */
+  /**
+   * When the building last changed. To change it, send the `ETag` header
+   * back as `If-Match`, not this field: the header is the version, this is
+   * for display.
+   */
   updatedAt!: Date;
 }
 

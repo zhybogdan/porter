@@ -43,6 +43,7 @@ const FILTERABLE = new Set([
   'aggregate',
   'groupBy',
   'updateMany',
+  'updateManyAndReturn',
   'deleteMany',
 ]);
 
@@ -54,8 +55,8 @@ const FILTERABLE = new Set([
  * to, so the tenant goes into the row itself. Which is also why `update`,
  * `delete` and `upsert` are still absent: each takes a unique `where`, the
  * same place `findUnique` fails, so a pass-through would edit a row belonging
- * to anyone. Their replacements are `updateMany` and `deleteMany`, which take
- * a filter -- and which is what optimistic locking needs anyway, because a
+ * to anyone. Their replacements are `updateMany`, `updateManyAndReturn` and
+ * `deleteMany`, which take a filter -- and which is what optimistic locking needs anyway, because a
  * conditional update is the only kind that can lose a race safely.
  */
 const STAMPABLE = new Set(['create', 'createMany', 'createManyAndReturn']);

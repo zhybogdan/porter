@@ -127,7 +127,12 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a building. Managers only, and only the version the caller read:
+         *     `If-Match` is required, so an edit made from a stale screen is refused
+         *     instead of quietly undoing somebody else's.
+         */
+        patch: operations["PropertiesController_update"];
         trace?: never;
     };
 }
@@ -216,7 +221,9 @@ export interface components {
             createdAt: string;
             /**
              * Format: date-time
-             * @description Also the value of the `ETag` header on this resource.
+             * @description When the building last changed. To change it, send the `ETag` header
+             *     back as `If-Match`, not this field: the header is the version, this is
+             *     for display.
              */
             updatedAt: string;
         };
@@ -236,6 +243,14 @@ export interface components {
             address: string;
             /** @description IANA zone name, for example `Europe/Kyiv`. */
             timezone: string;
+        };
+        UpdatePropertyDto: {
+            /** @description What the managers call this building: "Riverside 12". */
+            name?: string;
+            /** @description Free text, one line, as a courier would read it. */
+            address?: string;
+            /** @description IANA zone name, for example `Europe/Kyiv`. */
+            timezone?: string;
         };
     };
     responses: never;
@@ -487,6 +502,8 @@ export interface operations {
             /** @description The building created */
             201: {
                 headers: {
+                    /** @description This version of the building. Send it back as `If-Match` to change it */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -536,6 +553,8 @@ export interface operations {
             /** @description The building */
             200: {
                 headers: {
+                    /** @description This version of the building. Send it back as `If-Match` to change it */
+                    ETag?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -562,6 +581,100 @@ export interface operations {
             };
             /** @description No such building in the caller’s organization. Also the answer when it exists in another one */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    PropertiesController_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The `ETag` from the last GET, POST or PATCH of this building */
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePropertyDto"];
+            };
+        };
+        responses: {
+            /** @description The building after the change */
+            200: {
+                headers: {
+                    /** @description This version of the building. Send it back as `If-Match` to change it */
+                    ETag?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Property"];
+                };
+            };
+            /** @description The id is not a uuid, or If-Match is not a list of entity tags */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Signed in, but not as a manager */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No such building in the caller’s organization. Also the answer when it exists in another one */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The building changed since that ETag was issued. Read it again and retry */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The body failed validation or changes nothing; `errors` names the fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description If-Match is missing, or is `*`, which names no version */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
