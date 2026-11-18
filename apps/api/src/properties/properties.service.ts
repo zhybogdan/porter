@@ -1,4 +1,10 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  PreconditionFailedException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import {
   afterCursor,
   CURSOR_ORDER,
@@ -11,6 +17,7 @@ import { TENANT_DB, type TenantDb } from '../prisma/tenant-db.js';
 import type { CursorPageQueryDto } from '../common/pagination/cursor-page.dto.js';
 import type { CreatePropertyDto } from './dto/create-property.dto.js';
 import type { Property } from './dto/property.response.js';
+import type { UpdatePropertyDto } from './dto/update-property.dto.js';
 
 /**
  * The columns a client is told about, in one place. Spelling them out rather
@@ -83,6 +90,60 @@ export class PropertiesService {
       // nobody.
       data: dto as Prisma.PropertyCreateInput,
       select: VISIBLE,
+    });
+  }
+
+  /**
+   * Change a building, but only the version the caller has seen.
+   *
+   * `versions` come from `If-Match`: the `updated_at` values the caller
+   * believes are current. The write goes through only if one of them still
+   * is, so two managers editing the same building from the same read cannot
+   * both win -- the second one is told the building moved on, instead of
+   * silently erasing the first one's change.
+   */
+  async update(
+    id: string,
+    dto: UpdatePropertyDto,
+    versions: Date[],
+  ): Promise<Property> {
+    if (Object.keys(dto).length === 0) {
+      // Not a harmless no-op: the write would still move `updated_at`, and
+      // every other client holding this building's ETag would then be told
+      // it changed when nothing did.
+      throw new UnprocessableEntityException({
+        detail: 'Send at least one field to change',
+      });
+    }
+
+    // One statement, and the version is part of its filter. That is the whole
+    // lock: the database lets one write at a time touch the row, the first
+    // one moves `updated_at`, and the second one's filter then matches
+    // nothing. Reading the row first and comparing in code would leave a gap
+    // between the check and the write for another request to land in.
+    //
+    // `updateManyAndReturn`, not `update`: `update` takes a unique `where`,
+    // which can hold neither the tenant nor the version, and the tenant
+    // extension refuses it for that reason.
+    const [updated] = await this.db.property.updateManyAndReturn({
+      where: { id, updatedAt: { in: versions } },
+      data: dto,
+      select: VISIBLE,
+    });
+
+    if (updated) {
+      return updated;
+    }
+
+    // Nothing was written, for one of two reasons, and they need different
+    // answers: the building is not there (404, nothing to retry against) or
+    // it changed since the caller read it (412, read it again and retry).
+    // `byId` throws the 404, with the same rule about other organizations.
+    await this.byId(id);
+
+    throw new PreconditionFailedException({
+      detail:
+        'The building changed since the ETag you sent; read it again and retry',
     });
   }
 }

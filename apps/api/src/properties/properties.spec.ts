@@ -240,6 +240,169 @@ describe('properties endpoints', () => {
     });
   });
 
+  describe('changing a building', () => {
+    /** A building, and the ETag a manager would have read it with. */
+    async function readable(): Promise<{
+      id: string;
+      etag: string;
+      token: Record<UserRole, string>;
+    }> {
+      const { orgId, token } = await seedOrg('alpha');
+      const { id } = await seedProperty(orgId, 'Riverside 12');
+
+      const response = await request(server)
+        .get(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .expect(200);
+
+      const etag = response.headers['etag'];
+
+      // Ours, not just any: Express puts a weak ETag (a hash of the body) on
+      // every response by itself, so a missing line in the controller would
+      // still leave a header here -- one that `If-Match` refuses.
+      if (typeof etag !== 'string' || !/^"\d+"$/.test(etag)) {
+        throw new Error(`GET /properties/:id sent no version ETag: ${String(etag)}`);
+      }
+
+      return { id, etag, token };
+    }
+
+    it('takes the edit once and refuses the same version a second time', async () => {
+      const { id, etag, token } = await readable();
+
+      const first = await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', etag)
+        .send({ name: 'Riverside 12A' })
+        .expect(200);
+
+      expect((first.body as Property).name).toBe('Riverside 12A');
+      // A new version, so the caller can chain its next edit without a GET.
+      expect(first.headers['etag']).toBeDefined();
+      expect(first.headers['etag']).not.toBe(etag);
+
+      // The second manager read the building before the first one saved.
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', etag)
+        .send({ name: 'Riverside Twelve' })
+        .expect(412);
+
+      const stored = await prisma.property.findUniqueOrThrow({ where: { id } });
+      expect(stored.name).toBe('Riverside 12A');
+    });
+
+    it('lets exactly one of two simultaneous edits through', async () => {
+      const { id, etag, token } = await readable();
+
+      // Sent together, not one after the other: this is the race, and the
+      // test above only shows the order the race would have to end in.
+      const statuses = await Promise.all(
+        ['Edit A', 'Edit B'].map(async (name) => {
+          const response = await request(server)
+            .patch(`/properties/${id}`)
+            .set('Authorization', `Bearer ${token.manager}`)
+            .set('If-Match', etag)
+            .send({ name });
+
+          return response.status;
+        }),
+      );
+
+      expect(statuses.sort()).toEqual([200, 412]);
+    });
+
+    it('answers 428 when the edit is not conditional', async () => {
+      const { id, token } = await readable();
+
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .send({ name: 'Riverside 12A' })
+        .expect(428);
+    });
+
+    it('answers 400 when If-Match is not an entity tag', async () => {
+      const { id, token } = await readable();
+
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', 'yesterday')
+        .send({ name: 'Riverside 12A' })
+        .expect(400);
+    });
+
+    it('lets only the manager edit', async () => {
+      const { id, etag, token } = await readable();
+
+      for (const role of ['technician', 'resident'] as const) {
+        await request(server)
+          .patch(`/properties/${id}`)
+          .set('Authorization', `Bearer ${token[role]}`)
+          .set('If-Match', etag)
+          .send({ name: 'Riverside 12A' })
+          .expect(403);
+      }
+
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('If-Match', etag)
+        .send({ name: 'Riverside 12A' })
+        .expect(401);
+    });
+
+    it('answers 404, not 412, for another organization’s building', async () => {
+      const alpha = await seedOrg('alpha');
+      const beta = await seedOrg('beta');
+      const stranger = await prisma.property.create({
+        data: { ...BODY, orgId: beta.orgId },
+      });
+
+      // Even with the right version in hand: 412 would say the building is
+      // real and has moved on, which is a fact about somebody else's data.
+      await request(server)
+        .patch(`/properties/${stranger.id}`)
+        .set('Authorization', `Bearer ${alpha.token.manager}`)
+        .set('If-Match', `"${String(stranger.updatedAt.getTime())}"`)
+        .send({ name: 'Taken over' })
+        .expect(404);
+
+      const stored = await prisma.property.findUniqueOrThrow({
+        where: { id: stranger.id },
+      });
+      expect(stored.name).toBe(BODY.name);
+    });
+
+    it('refuses an edit that changes nothing, or sets what it may not', async () => {
+      const { id, etag, token } = await readable();
+
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', etag)
+        .send({})
+        .expect(422);
+
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', etag)
+        .send({ timezone: '+02:00' })
+        .expect(422);
+
+      // The version is the database's to move, never the client's to set.
+      await request(server)
+        .patch(`/properties/${id}`)
+        .set('Authorization', `Bearer ${token.manager}`)
+        .set('If-Match', etag)
+        .send({ updatedAt: '2030-01-01T00:00:00.000Z' })
+        .expect(422);
+    });
+  });
+
   describe('what the body must be', () => {
     it('refuses an offset where a zone name belongs', async () => {
       const { token } = await seedOrg('alpha');

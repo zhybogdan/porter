@@ -299,6 +299,14 @@
         "responses": {
           "201": {
             "description": "The building created",
+            "headers": {
+              "ETag": {
+                "description": "This version of the building. Send it back as `If-Match` to change it",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -360,6 +368,14 @@
         "responses": {
           "200": {
             "description": "The building",
+            "headers": {
+              "ETag": {
+                "description": "This version of the building. Send it back as `If-Match` to change it",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -400,6 +416,132 @@
           }
         },
         "summary": "One building by id.",
+        "tags": [
+          "properties"
+        ]
+      },
+      "patch": {
+        "operationId": "PropertiesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The `ETag` from the last GET, POST or PATCH of this building",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePropertyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The building after the change",
+            "headers": {
+              "ETag": {
+                "description": "This version of the building. Send it back as `If-Match` to change it",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Property"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not a uuid, or If-Match is not a list of entity tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed in, but not as a manager",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such building in the caller’s organization. Also the answer when it exists in another one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "The building changed since that ETag was issued. Read it again and retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation or changes nothing; `errors` names the fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match is missing, or is `*`, which names no version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change a building. Managers only, and only the version the caller read:\n`If-Match` is required, so an edit made from a stale screen is refused\ninstead of quietly undoing somebody else's.",
         "tags": [
           "properties"
         ]
@@ -626,7 +768,7 @@
           "updatedAt": {
             "format": "date-time",
             "type": "string",
-            "description": "Also the value of the `ETag` header on this resource."
+            "description": "When the building last changed. To change it, send the `ETag` header\nback as `If-Match`, not this field: the header is the version, this is\nfor display."
           }
         },
         "required": [
@@ -681,6 +823,25 @@
           "address",
           "timezone"
         ]
+      },
+      "UpdatePropertyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What the managers call this building: \"Riverside 12\".",
+            "maxLength": 200
+          },
+          "address": {
+            "type": "string",
+            "description": "Free text, one line, as a courier would read it.",
+            "maxLength": 500
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA zone name, for example `Europe/Kyiv`."
+          }
+        }
       }
     }
   },
