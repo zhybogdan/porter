@@ -2,12 +2,13 @@ import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll,
+  beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
-import type { AccessTokenPayload } from '../auth/access-token-payload.js';
 import type { UserRole } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { type SeededOrg, seedOrg as seedOrgWith } from '../test/actors.js';
 import { truncateAll } from '../test/db.js';
 import type { Property, PropertyPage } from './dto/property.response.js';
 
@@ -23,37 +24,8 @@ describe('properties endpoints', () => {
   let jwt: JwtService;
   let server: Parameters<typeof request>[0];
 
-  /** One organization with one account per role, which is the matrix. */
-  async function seedOrg(label: string): Promise<{
-    orgId: string;
-    token: Record<UserRole, string>;
-  }> {
-    const org = await prisma.organization.create({
-      data: { name: `${label} Property Group` },
-    });
-
-    const roles: UserRole[] = ['manager', 'technician', 'resident'];
-    const token = {} as Record<UserRole, string>;
-
-    for (const role of roles) {
-      const user = await prisma.user.create({
-        data: {
-          orgId: org.id,
-          email: `${role}@${label}.test`,
-          passwordHash: 'not-a-real-hash',
-          role,
-          fullName: `Demo ${role}`,
-        },
-      });
-
-      token[role] = await jwt.signAsync({
-        sub: user.id,
-        org: org.id,
-        role,
-      } satisfies AccessTokenPayload);
-    }
-
-    return { orgId: org.id, token };
+  function seedOrg(label: string): Promise<SeededOrg> {
+    return seedOrgWith(prisma, jwt, label);
   }
 
   /** Written with the unscoped handle: the fixture is not what is under test. */
@@ -77,7 +49,11 @@ describe('properties endpoints', () => {
     server = app.getHttpServer() as Parameters<typeof request>[0];
   });
 
-  afterEach(async () => {
+  // Before each test, not after: a test is then sure of the state it starts
+  // from, whatever the file that ran before it left behind. Cleaning after
+  // instead trusts every other file to have done the same, and one that
+  // cleaned only before its own tests once left its last test's users here.
+  beforeEach(async () => {
     await truncateAll(prisma);
   });
 
