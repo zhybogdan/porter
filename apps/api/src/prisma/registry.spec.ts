@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll,
+  beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { truncateAll } from '../test/db.js';
@@ -63,7 +64,11 @@ describe('registry tables', () => {
     db = moduleRef.get<TenantDb>(TENANT_DB);
   });
 
-  afterEach(async () => {
+  // Before each test, not after: a test is then sure of the state it starts
+  // from, whatever the file that ran before it left behind. Cleaning after
+  // instead trusts every other file to have done the same, and one that
+  // cleaned only before its own tests once left its last test's users here.
+  beforeEach(async () => {
     await truncateAll(prisma);
   });
 
@@ -216,5 +221,41 @@ describe('registry tables', () => {
     expect(seen.units).toBe(1);
     expect(seen.residencies).toBe(1);
     expect(seen.strangerProperty).toBeNull();
+  });
+
+  it('cannot reach another organization’s units through include', async () => {
+    // The extension filters the model a query names, not the relations it
+    // pulls in with `include`. That is safe here for a reason the schema
+    // gives, not the extension: a unit's `org_id` is held to its building's
+    // by the composite foreign key, so a building that passed the filter can
+    // only carry units of the same organization. A relation without such a
+    // key would leak through `include`, and this test is the reminder.
+    const alpha = await createOrg('Alpha Property Group');
+    const beta = await createOrg('Beta Property Group');
+    const alphaProperty = await createProperty(alpha);
+    const betaProperty = await createProperty(beta);
+    await prisma.unit.create({
+      data: { orgId: alpha, propertyId: alphaProperty, label: 'A1' },
+    });
+    await prisma.unit.create({
+      data: { orgId: beta, propertyId: betaProperty, label: 'B1' },
+    });
+
+    const seen = await runWithTenantContext(async () => {
+      setTenant(alpha);
+
+      return {
+        stranger: await db.property.findFirst({
+          where: { id: betaProperty },
+          include: { units: true },
+        }),
+        own: await db.property.findMany({ include: { units: true } }),
+      };
+    });
+
+    expect(seen.stranger).toBeNull();
+    expect(seen.own.flatMap((p) => p.units.map((unit) => unit.label))).toEqual([
+      'A1',
+    ]);
   });
 });

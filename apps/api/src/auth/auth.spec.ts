@@ -6,6 +6,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -62,9 +63,13 @@ describe('POST /auth/login', () => {
     server = app.getHttpServer() as Parameters<typeof request>[0];
   });
 
-  afterEach(async () => {
-    vi.restoreAllMocks();
+  // Rows are cleaned before each test, not after: why in properties.spec.ts.
+  beforeEach(async () => {
     await truncateAll(prisma);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {

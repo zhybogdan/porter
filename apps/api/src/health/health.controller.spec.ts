@@ -1,7 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll,
+  beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../app.module.js';
 import { configureApp } from '../app.setup.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -24,7 +25,11 @@ describe('health against a real database', () => {
     server = app.getHttpServer() as Parameters<typeof request>[0];
   });
 
-  afterEach(async () => {
+  // Before each test, not after: a test is then sure of the state it starts
+  // from, whatever the file that ran before it left behind. Cleaning after
+  // instead trusts every other file to have done the same, and one that
+  // cleaned only before its own tests once left its last test's users here.
+  beforeEach(async () => {
     await truncateAll(prisma);
   });
 

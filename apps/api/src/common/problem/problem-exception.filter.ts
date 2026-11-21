@@ -8,6 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Prisma } from '../../generated/prisma/client.js';
 import {
   PROBLEM_CONTENT_TYPE,
   type ProblemDetail,
@@ -69,7 +70,41 @@ export class ProblemExceptionFilter implements ExceptionFilter {
   }
 }
 
+/**
+ * Constraint violations the database reports, and what a client is told.
+ *
+ * The codes are Prisma's, checked against what this Prisma version really
+ * throws rather than remembered: a duplicate unit label arrives as `P2002`
+ * (Postgres `23505`), a unit pointing at a property of another organization
+ * as `P2003` (Postgres `23503`). Both are 409: the request was well formed,
+ * and what it ran into is the current state of the data, not its own shape.
+ *
+ * Mapped here and not in each service, so the rule is one decision. A
+ * service that wants a better sentence than the generic one checks first and
+ * throws its own exception; this is the net under every service that did not.
+ * The constraint name stays in the log: it is the database's vocabulary, and
+ * putting it in the API would make renaming an index a breaking change.
+ */
+const CONSTRAINT_PROBLEMS = new Map<string, string>([
+  ['P2002', 'Conflicts with an existing record'],
+  ['P2003', 'Refers to a record that does not exist'],
+]);
+
 function toProblem(exception: unknown, instance: string): ProblemDetail {
+  if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    const detail = CONSTRAINT_PROBLEMS.get(exception.code);
+
+    if (detail !== undefined) {
+      return {
+        type: 'about:blank',
+        title: title(HttpStatus.CONFLICT),
+        status: HttpStatus.CONFLICT,
+        detail,
+        instance,
+      };
+    }
+  }
+
   if (!(exception instanceof HttpException)) {
     return {
       type: 'about:blank',

@@ -135,6 +135,24 @@ export interface paths {
         patch: operations["PropertiesController_update"];
         trace?: never;
     };
+    "/properties/{propertyId}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The units of one building, newest first. */
+        get: operations["UnitsController_list"];
+        put?: never;
+        /** Add a unit to a building. Managers only. */
+        post: operations["UnitsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -251,6 +269,25 @@ export interface components {
             address?: string;
             /** @description IANA zone name, for example `Europe/Kyiv`. */
             timezone?: string;
+        };
+        Unit: {
+            id: string;
+            propertyId: string;
+            /** @description As written on the door. */
+            label: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        UnitPage: {
+            items: components["schemas"]["Unit"][];
+            /** @description Pass back as `?cursor=` for the next page. Null on the last one. */
+            nextCursor: string | null;
+        };
+        CreateUnitDto: {
+            /** @description As written on the door: "12B", "Penthouse", "Unit 4 (rear)". */
+            label: string;
         };
     };
     responses: never;
@@ -675,6 +712,149 @@ export interface operations {
             };
             /** @description If-Match is missing, or is `*`, which names no version */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    UnitsController_list: {
+        parameters: {
+            query?: {
+                /** @description Omit for the first page; otherwise the `nextCursor` of the page before. */
+                cursor?: string;
+                /** @description How many rows to return, at most 100. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                propertyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnitPage"];
+                };
+            };
+            /** @description The building id is not a uuid, or the cursor could not be read */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No such building in the caller’s organization. Also the answer when it exists in another one */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description A query parameter failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    UnitsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                propertyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUnitDto"];
+            };
+        };
+        responses: {
+            /** @description The unit created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Unit"];
+                };
+            };
+            /** @description The building id is not a uuid, or the cursor could not be read */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Signed in, but not as a manager */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No such building in the caller’s organization. Also the answer when it exists in another one */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description This building already has a unit with that label */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The body failed validation; `errors` names the fields */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
