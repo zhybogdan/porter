@@ -737,6 +737,243 @@
           "units"
         ]
       }
+    },
+    "/units/{unitId}/residencies": {
+      "get": {
+        "operationId": "ResidenciesController_current",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current residencies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Residency"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An id is not a uuid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed in, but not in a role that may do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such unit in the caller’s organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "The current residents of a unit.",
+        "tags": [
+          "residencies"
+        ]
+      },
+      "post": {
+        "operationId": "ResidenciesController_moveIn",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The residency started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Residency"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An id is not a uuid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed in, but not in a role that may do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such unit in the caller’s organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That resident already lives in that unit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation, or `userId` is not a resident",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Move a resident in. Managers only.",
+        "tags": [
+          "residencies"
+        ]
+      }
+    },
+    "/residencies/{id}": {
+      "delete": {
+        "operationId": "ResidenciesController_moveOut",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The residency has ended"
+          },
+          "400": {
+            "description": "An id is not a uuid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed in, but not in a role that may do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such residency in the caller’s organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Move a resident out. Managers only. Ends the residency rather than\ndeleting it, and answers 204 again if it has already ended.",
+        "tags": [
+          "residencies"
+        ]
+      }
     }
   },
   "info": {
@@ -1095,6 +1332,50 @@
         },
         "required": [
           "label"
+        ]
+      },
+      "Residency": {
+        "type": "object",
+        "properties": {
+          "movedOutAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true,
+            "description": "Null while they still live there."
+          },
+          "id": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "movedInAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "movedOutAt",
+          "id",
+          "unitId",
+          "userId",
+          "movedInAt"
+        ]
+      },
+      "MoveInDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "The resident's user id. Must be a resident of the caller's organization.",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "userId"
         ]
       }
     }

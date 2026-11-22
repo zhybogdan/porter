@@ -206,5 +206,10 @@ model Residency {
   @@index([orgId])
   @@index([unitId])
   @@index([userId])
+  /// Two more rules live only in migration 20261122103933_residency_rules,
+  /// because this file cannot express them: a partial unique index allowing
+  /// one current residency per (unit, user), and a CHECK that nobody moves
+  /// out before moving in. `migrate diff` was run against them and leaves
+  /// both alone.
   @@map("residencies")
 }
