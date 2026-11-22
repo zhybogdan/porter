@@ -62,18 +62,57 @@ describe('properties endpoints', () => {
   });
 
   describe('who may do what', () => {
-    it('lets every signed-in role read the list', async () => {
-      const { orgId, token } = await seedOrg('alpha');
-      await seedProperty(orgId, 'Riverside 12');
+    it('shows staff every building, and a resident only the ones they live in', async () => {
+      const { orgId, token, userId } = await seedOrg('alpha');
+      const home = await seedProperty(orgId, 'Riverside 12');
+      await seedProperty(orgId, 'Harbour 3');
 
-      for (const role of ['manager', 'technician', 'resident'] as const) {
+      for (const role of ['manager', 'technician'] as const) {
         const response = await request(server)
           .get('/properties')
           .set('Authorization', `Bearer ${token[role]}`)
           .expect(200);
 
-        expect((response.body as PropertyPage).items).toHaveLength(1);
+        expect((response.body as PropertyPage).items).toHaveLength(2);
       }
+
+      const names = async (): Promise<string[]> => {
+        const response = await request(server)
+          .get('/properties')
+          .set('Authorization', `Bearer ${token.resident}`)
+          .expect(200);
+
+        return (response.body as PropertyPage).items.map((item) => item.name);
+      };
+
+      // Not moved in anywhere yet: nothing to see.
+      expect(await names()).toEqual([]);
+
+      const unit = await prisma.unit.create({
+        data: { orgId, propertyId: home.id, label: '12B' },
+      });
+      const residency = await prisma.residency.create({
+        data: { orgId, unitId: unit.id, userId: userId.resident },
+      });
+
+      expect(await names()).toEqual(['Riverside 12']);
+
+      // The other building, asked for by id, is answered as if it did not
+      // exist -- the same 404 another organization's building gets.
+      const other = await prisma.property.findFirstOrThrow({
+        where: { name: 'Harbour 3' },
+      });
+      await request(server)
+        .get(`/properties/${other.id}`)
+        .set('Authorization', `Bearer ${token.resident}`)
+        .expect(404);
+
+      // Moved out: the history stays, the view of the building goes.
+      await prisma.residency.update({
+        where: { id: residency.id },
+        data: { movedOutAt: new Date() },
+      });
+      expect(await names()).toEqual([]);
     });
 
     it('lets only the manager add one', async () => {

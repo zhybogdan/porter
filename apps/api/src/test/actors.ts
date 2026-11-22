@@ -9,6 +9,8 @@ export interface SeededOrg {
   orgId: string;
   /** A signed access token per role: one account each, which is the matrix. */
   token: Record<UserRole, string>;
+  /** The account behind each token, for fixtures that point at a user. */
+  userId: Record<UserRole, string>;
 }
 
 /**
@@ -29,6 +31,7 @@ export async function seedOrg(
   });
 
   const token = {} as Record<UserRole, string>;
+  const userId = {} as Record<UserRole, string>;
 
   for (const role of ROLES) {
     const user = await prisma.user.create({
@@ -41,6 +44,7 @@ export async function seedOrg(
       },
     });
 
+    userId[role] = user.id;
     token[role] = await jwt.signAsync({
       sub: user.id,
       org: org.id,
@@ -48,5 +52,5 @@ export async function seedOrg(
     } satisfies AccessTokenPayload);
   }
 
-  return { orgId: org.id, token };
+  return { orgId: org.id, token, userId };
 }

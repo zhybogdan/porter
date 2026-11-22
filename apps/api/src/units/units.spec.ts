@@ -75,15 +75,26 @@ describe('units endpoints', () => {
   });
 
   describe('who may do what', () => {
-    it('lets every signed-in role read a building’s units', async () => {
-      const { orgId, token } = await seedOrg('alpha');
+    it('lets staff read any building’s units, and a resident only their own building’s', async () => {
+      const { orgId, token, userId } = await seedOrg('alpha');
       const propertyId = await seedProperty(orgId);
       await seedUnit(orgId, propertyId, '12B');
 
-      for (const role of ['manager', 'technician', 'resident'] as const) {
+      for (const role of ['manager', 'technician'] as const) {
         const response = await list(propertyId, token[role]).expect(200);
         expect((response.body as UnitPage).items).toHaveLength(1);
       }
+
+      // A building the resident does not live in is not theirs to look into.
+      await list(propertyId, token.resident).expect(404);
+
+      const unit = await prisma.unit.findFirstOrThrow({ where: { propertyId } });
+      await prisma.residency.create({
+        data: { orgId, unitId: unit.id, userId: userId.resident },
+      });
+
+      const response = await list(propertyId, token.resident).expect(200);
+      expect((response.body as UnitPage).items).toHaveLength(1);
     });
 
     it('lets only the manager add one', async () => {

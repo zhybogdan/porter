@@ -28,6 +28,8 @@ import type { Response } from 'express';
 import { etagOf, requiredVersions } from '../common/concurrency/etag.js';
 import { CursorPageQueryDto } from '../common/pagination/cursor-page.dto.js';
 import { ProblemDetail } from '../common/problem/problem-detail.response.js';
+import type { AuthenticatedUser } from '../auth/authenticated-request.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { CreatePropertyDto } from './dto/create-property.dto.js';
 import { Property, PropertyPage } from './dto/property.response.js';
@@ -68,8 +70,11 @@ export class PropertiesController {
     description: 'A query parameter failed validation',
     type: ProblemDetail,
   })
-  list(@Query() query: CursorPageQueryDto): Promise<PropertyPage> {
-    return this.properties.list(query);
+  list(
+    @Query() query: CursorPageQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PropertyPage> {
+    return this.properties.list(query, user);
   }
 
   /** One building by id. */
@@ -95,8 +100,9 @@ export class PropertiesController {
     // the returned value as the body. Without it Nest would hand the whole
     // response over and send nothing itself.
     @Res({ passthrough: true }) response: Response,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Property> {
-    const property = await this.properties.byId(id);
+    const property = await this.properties.byId(id, user);
     response.setHeader('ETag', etagOf(property.updatedAt));
     return property;
   }
@@ -180,13 +186,14 @@ export class PropertiesController {
     @Headers('if-match') ifMatch: string | undefined,
     @Body() dto: UpdatePropertyDto,
     @Res({ passthrough: true }) response: Response,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Property> {
     // The version travels in a header and not in the body, because it is a
     // fact about the request -- "apply this to the copy I saw" -- not a field
     // of the building. The same header works on any resource, and a body
     // field would have to be invented, validated and documented per resource.
     const versions = requiredVersions(ifMatch);
-    const property = await this.properties.update(id, dto, versions);
+    const property = await this.properties.update(id, dto, versions, user);
     response.setHeader('ETag', etagOf(property.updatedAt));
     return property;
   }

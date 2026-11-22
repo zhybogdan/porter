@@ -13,11 +13,13 @@ import {
   toPage,
 } from '../common/pagination/cursor.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import type { AuthenticatedUser } from '../auth/authenticated-request.js';
 import { TENANT_DB, type TenantDb } from '../prisma/tenant-db.js';
 import type { CursorPageQueryDto } from '../common/pagination/cursor-page.dto.js';
 import type { CreatePropertyDto } from './dto/create-property.dto.js';
 import type { Property } from './dto/property.response.js';
 import type { UpdatePropertyDto } from './dto/update-property.dto.js';
+import { visibleProperties } from './property-visibility.js';
 
 /**
  * The columns a client is told about, in one place. Spelling them out rather
@@ -41,12 +43,12 @@ export class PropertiesService {
   // extension's job to make true.
   constructor(@Inject(TENANT_DB) private readonly db: TenantDb) {}
 
-  async list({
-    cursor,
-    limit = DEFAULT_PAGE_SIZE,
-  }: CursorPageQueryDto): Promise<CursorPage<Property>> {
+  async list(
+    { cursor, limit = DEFAULT_PAGE_SIZE }: CursorPageQueryDto,
+    user: AuthenticatedUser,
+  ): Promise<CursorPage<Property>> {
     const rows = await this.db.property.findMany({
-      where: afterCursor(cursor),
+      where: { ...visibleProperties(user), ...afterCursor(cursor) },
       orderBy: [...CURSOR_ORDER],
       // One more than asked for, and `toPage` says why.
       take: limit + 1,
@@ -56,12 +58,14 @@ export class PropertiesService {
     return toPage(rows, limit);
   }
 
-  async byId(id: string): Promise<Property> {
+  async byId(id: string, user: AuthenticatedUser): Promise<Property> {
     // `findFirst`, not `findUnique`: Prisma only takes unique columns in a
     // `findUnique` filter, so the tenant cannot be added to one -- and the
     // extension refuses it for exactly that reason.
     const property = await this.db.property.findFirst({
-      where: { id },
+      // A building a resident does not live in is answered like one in
+      // another organization: 404, for the same reason.
+      where: { id, ...visibleProperties(user) },
       select: VISIBLE,
     });
 
@@ -106,6 +110,7 @@ export class PropertiesService {
     id: string,
     dto: UpdatePropertyDto,
     versions: Date[],
+    user: AuthenticatedUser,
   ): Promise<Property> {
     if (Object.keys(dto).length === 0) {
       // Not a harmless no-op: the write would still move `updated_at`, and
@@ -139,7 +144,7 @@ export class PropertiesService {
     // answers: the building is not there (404, nothing to retry against) or
     // it changed since the caller read it (412, read it again and retry).
     // `byId` throws the 404, with the same rule about other organizations.
-    await this.byId(id);
+    await this.byId(id, user);
 
     throw new PreconditionFailedException({
       detail:

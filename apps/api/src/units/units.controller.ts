@@ -18,6 +18,8 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import type { AuthenticatedUser } from '../auth/authenticated-request.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { CursorPageQueryDto } from '../common/pagination/cursor-page.dto.js';
 import { ProblemDetail } from '../common/problem/problem-detail.response.js';
@@ -62,8 +64,9 @@ export class UnitsController {
   list(
     @Param('propertyId', ParseUUIDPipe) propertyId: string,
     @Query() query: CursorPageQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<UnitPage> {
-    return this.units.list(propertyId, query);
+    return this.units.list(propertyId, query, user);
   }
 
   /** Add a unit to a building. Managers only. */
@@ -86,7 +89,8 @@ export class UnitsController {
   create(
     @Param('propertyId', ParseUUIDPipe) propertyId: string,
     @Body() dto: CreateUnitDto,
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<Unit> {
-    return this.units.create(propertyId, dto);
+    return this.units.create(propertyId, dto, user);
   }
 }

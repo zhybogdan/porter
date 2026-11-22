@@ -7,7 +7,9 @@ import {
   toPage,
 } from '../common/pagination/cursor.js';
 import type { CursorPageQueryDto } from '../common/pagination/cursor-page.dto.js';
+import type { AuthenticatedUser } from '../auth/authenticated-request.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { visibleProperties } from '../properties/property-visibility.js';
 import { TENANT_DB, type TenantDb } from '../prisma/tenant-db.js';
 import type { CreateUnitDto } from './dto/create-unit.dto.js';
 import type { Unit } from './dto/unit.response.js';
@@ -29,8 +31,9 @@ export class UnitsService {
   async list(
     propertyId: string,
     { cursor, limit = DEFAULT_PAGE_SIZE }: CursorPageQueryDto,
+    user: AuthenticatedUser,
   ): Promise<CursorPage<Unit>> {
-    await this.requireProperty(propertyId);
+    await this.requireProperty(propertyId, user);
 
     const rows = await this.db.unit.findMany({
       // Two filters, and each does a different job. `propertyId` keeps the
@@ -46,8 +49,12 @@ export class UnitsService {
   }
 
   /** Add a door to a building. */
-  async create(propertyId: string, dto: CreateUnitDto): Promise<Unit> {
-    await this.requireProperty(propertyId);
+  async create(
+    propertyId: string,
+    dto: CreateUnitDto,
+    user: AuthenticatedUser,
+  ): Promise<Unit> {
+    await this.requireProperty(propertyId, user);
 
     // A second label "12B" in the same building is refused by the unique
     // index and leaves through the error filter as 409. Not checked here
@@ -72,9 +79,14 @@ export class UnitsService {
    * route answers for another organization's id, and the answer has to be
    * the same everywhere for it to hide anything.
    */
-  private async requireProperty(id: string): Promise<void> {
+  private async requireProperty(
+    id: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
     const property = await this.db.property.findFirst({
-      where: { id },
+      // A resident sees the doors of the buildings they live in, and only
+      // those: 404 for the rest, as in `PropertiesService.byId`.
+      where: { id, ...visibleProperties(user) },
       select: { id: true },
     });
 
