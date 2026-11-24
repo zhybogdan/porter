@@ -6,13 +6,14 @@
   "description": "The OpenAPI document of the Porter API and the TypeScript client generated from it",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./openapi.json": "./openapi.json"
   },
   "files": [
     "dist",
+    "src",
     "openapi.json"
   ],
   "scripts": {
