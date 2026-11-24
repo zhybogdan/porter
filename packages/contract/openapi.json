@@ -974,6 +974,160 @@
           "residencies"
         ]
       }
+    },
+    "/invites": {
+      "post": {
+        "operationId": "InvitesController_issue",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInviteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The invite, with its code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedInvite"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed in, but not in a role that may do this",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with this email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation, or `unitId` is not usable here",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Issue an invite. Managers only.",
+        "tags": [
+          "invites"
+        ]
+      }
+    },
+    "/invites/{code}/accept": {
+      "post": {
+        "operationId": "InvitesController_accept",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInviteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No invite with this code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An account with this email was created after the invite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The invite has already been used or has expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body failed validation; `errors` names the fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "summary": "Accept an invite: create the account it was issued for.",
+        "tags": [
+          "invites"
+        ]
+      }
     }
   },
   "info": {
@@ -1376,6 +1530,92 @@
         },
         "required": [
           "userId"
+        ]
+      },
+      "CreateInviteDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "description": "What the new account may do.",
+            "enum": [
+              "technician",
+              "resident"
+            ],
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "description": "Who the account is for. The person accepting cannot change it.",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "unitId": {
+            "type": "string",
+            "description": "For a resident: the unit they move into when they accept.",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "role",
+          "email"
+        ]
+      },
+      "IssuedInvite": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "enum": [
+              "technician",
+              "resident"
+            ],
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Hand this to the person, as `POST /invites/{code}/accept`. Only its hash\nis stored, so it cannot be shown again: a lost code means a new invite."
+          }
+        },
+        "required": [
+          "role",
+          "unitId",
+          "id",
+          "email",
+          "expiresAt",
+          "code"
+        ]
+      },
+      "AcceptInviteDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "As the person wants to be addressed.",
+            "maxLength": 100
+          },
+          "password": {
+            "type": "string",
+            "description": "At least 15 characters.",
+            "minLength": 15,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "fullName",
+          "password"
         ]
       }
     }

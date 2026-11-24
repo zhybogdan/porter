@@ -23,6 +23,7 @@ const SCOPE_FIELD = new Map<string, string>([
   ['Property', 'orgId'],
   ['Unit', 'orgId'],
   ['Residency', 'orgId'],
+  ['Invite', 'orgId'],
 ]);
 
 /**

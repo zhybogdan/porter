@@ -191,6 +191,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/invites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue an invite. Managers only. */
+        post: operations["InvitesController_issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invites/{code}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept an invite: create the account it was issued for. */
+        post: operations["InvitesController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -345,6 +379,43 @@ export interface components {
              * @description The resident's user id. Must be a resident of the caller's organization.
              */
             userId: string;
+        };
+        CreateInviteDto: {
+            /**
+             * @description What the new account may do.
+             * @enum {string}
+             */
+            role: "technician" | "resident";
+            /**
+             * Format: email
+             * @description Who the account is for. The person accepting cannot change it.
+             */
+            email: string;
+            /**
+             * Format: uuid
+             * @description For a resident: the unit they move into when they accept.
+             */
+            unitId?: string;
+        };
+        IssuedInvite: {
+            /** @enum {string} */
+            role: "technician" | "resident";
+            unitId: string | null;
+            id: string;
+            email: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /**
+             * @description Hand this to the person, as `POST /invites/{code}/accept`. Only its hash
+             *     is stored, so it cannot be shown again: a lost code means a new invite.
+             */
+            code: string;
+        };
+        AcceptInviteDto: {
+            /** @description As the person wants to be addressed. */
+            fullName: string;
+            /** @description At least 15 characters. */
+            password: string;
         };
     };
     responses: never;
@@ -1106,6 +1177,128 @@ export interface operations {
             };
             /** @description No such residency in the caller’s organization */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    InvitesController_issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInviteDto"];
+            };
+        };
+        responses: {
+            /** @description The invite, with its code */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedInvite"];
+                };
+            };
+            /** @description Missing, malformed or expired access token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Signed in, but not in a role that may do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description An account with this email already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The body failed validation, or `unitId` is not usable here */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    InvitesController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInviteDto"];
+            };
+        };
+        responses: {
+            /** @description The account created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            /** @description No invite with this code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description An account with this email was created after the invite */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The invite has already been used or has expired */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description The body failed validation; `errors` names the fields */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

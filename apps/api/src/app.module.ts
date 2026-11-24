@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
+import { InvitesModule } from './invites/invites.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
 import { ResidenciesModule } from './residencies/residencies.module.js';
@@ -40,6 +41,7 @@ const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
     PropertiesModule,
     UnitsModule,
     ResidenciesModule,
+    InvitesModule,
   ],
 })
 export class AppModule {}

@@ -56,6 +56,7 @@ model User {
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   sessions     Session[]
   residencies  Residency[]
+  invites      Invite[]
 
   /// Not a second way to identify a user: `id` alone already does that. This
   /// pair exists to be pointed at. A residency names a unit and a user and
@@ -164,6 +165,7 @@ model Unit {
 
   property    Property    @relation(fields: [propertyId, orgId], references: [id, orgId], onDelete: Cascade)
   residencies Residency[]
+  invites     Invite[]
 
   /// Two doors in one building cannot carry the same label. Across buildings
   /// they can, and usually do.
@@ -212,4 +214,59 @@ model Residency {
   /// out before moving in. `migrate diff` was run against them and leaves
   /// both alone.
   @@map("residencies")
+}
+
+/// A one-time code a manager hands to somebody who has no account yet.
+///
+/// The only way into the system besides the seed: there is no self sign-up,
+/// because "anyone can create an account in any building" is a problem this
+/// API would then have to solve, and a manager who knows their residents
+/// already solves it.
+model Invite {
+  id String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+
+  /// The organization the new account will belong to. Not taken from the
+  /// person accepting -- they have no account and no token -- but written
+  /// here by the manager's request, and read back on accept.
+  orgId String @map("org_id") @db.Uuid
+
+  /// SHA-256 of the code, never the code: the same reasoning as
+  /// `sessions.token_hash`. A dump of this table must not hand out accounts.
+  codeHash String @unique @map("code_hash")
+
+  /// Who the account is for. Fixed by the manager, not typed by whoever
+  /// holds the code, so a code forwarded to somebody else still opens only
+  /// the account it was made for.
+  email String
+
+  /// Technician or resident. A CHECK in the migration refuses `manager`.
+  role UserRole
+
+  /// The unit a resident moves into on accept. Only for residents: a CHECK
+  /// in the migration refuses it on any other role.
+  unitId String? @map("unit_id") @db.Uuid
+
+  /// The manager who issued it.
+  invitedById String @map("invited_by") @db.Uuid
+
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Set once, on accept. A timestamp rather than a boolean, for the reason
+  /// `sessions.revoked_at` gives.
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// Both foreign keys carry `org_id`, as on `residencies`: the unit and the
+  /// manager are refused by the database unless they belong to the same
+  /// organization as the invite. That also covers the organization itself,
+  /// so there is no third key to `organizations`.
+  invitedBy User  @relation(fields: [invitedById, orgId], references: [id, orgId], onDelete: Cascade)
+  unit      Unit? @relation(fields: [unitId, orgId], references: [id, orgId], onDelete: Cascade)
+
+  @@index([orgId])
+  /// Three CHECKs live only in migration 20261124080541_invites, because this
+  /// file cannot express them: role is not manager, unit only for a
+  /// resident, email in lowercase.
+  @@map("invites")
 }
